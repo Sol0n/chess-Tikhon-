@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шахматные головоломки</title>
+<meta name="theme-color" content="#f4f1f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Шахматы">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a quiet pastel desk; the chessboard is the only large object, the muted red marks what to press and what is wrong. Single light theme by choice. */
+:root{
+  color-scheme:light;
+  --bg:#f4f1f8; --surface:#fffdfb; --ink:#2f2a3d; --muted:#766f86; --line:#e3deec;
+  --accent:#c4474f; --accent-ink:#a5363e; --accent-soft:#f8dedd;
+  --sq-light:#fbf7ef; --sq-dark:#cbdbee; --gold:#e0a93f; --ok:#4f9a78;
+  --t-peach:#fde6d8; --t-mint:#dcefe4; --t-sky:#dce8f7; --t-lilac:#e9e0f8;
+  --display:"Unbounded","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:400 17px/1.45 var(--body);-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;touch-action:manipulation}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3,p,ul{margin:0}
+ul{padding:0;list-style:none}
+#app{max-width:1040px;margin:0 auto;padding:20px 20px 48px}
+.screen{display:none}
+.screen.on{display:block;animation:screen-in .3s ease-out}
+@keyframes screen-in{from{opacity:.0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.top{display:flex;align-items:center;gap:12px;margin-bottom:20px;min-height:48px}
+.brand{font:500 15px/1.2 var(--display);letter-spacing:.02em;color:var(--muted);flex:1}
+.brand b{color:var(--ink);font-weight:700}
+.icon-btn{width:48px;height:48px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;transition:transform .15s}
+.icon-btn:active,.btn:active,.mcard:active,.lvl:active{transform:scale(.95)}
+.icon-btn svg{width:22px;height:22px}
+.back{display:flex;align-items:center;gap:8px;height:48px;padding:0 16px 0 10px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-weight:500;transition:transform .15s}
+.back svg{width:20px;height:20px}
+.head-title{flex:1;min-width:0}
+.head-title h1{font:700 22px/1.2 var(--display);text-wrap:balance}
+.head-title p{color:var(--muted);font-size:15px}
+
+/* Home */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:20px 24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:24px;margin-bottom:20px}
+.rank-piece{width:112px;height:112px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center}
+.rank-piece svg{width:84px;height:84px;animation:bob 4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.hello{color:var(--muted);font-weight:500}
+.hero h1{font:700 clamp(22px,4.2vw,32px)/1.15 var(--display);margin:2px 0 14px;text-wrap:balance}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.next{color:var(--muted);font-size:15px;margin-top:8px}
+.stats{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px}
+.stats li{flex:1 1 150px;background:var(--bg);border-radius:16px;padding:12px 16px;color:var(--muted);font-size:15px}
+.stats b{display:block;font:700 24px/1.2 var(--display);color:var(--ink);font-variant-numeric:tabular-nums}
+.modes{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:640px){.modes{grid-template-columns:1fr 1fr}}
+.mcard{display:grid;grid-template-columns:72px 1fr;gap:4px 16px;align-items:center;text-align:left;padding:20px;border-radius:24px;border:1px solid transparent;transition:transform .15s,box-shadow .2s}
+.mcard:hover{box-shadow:0 6px 0 -2px rgba(47,42,61,.08)}
+.mcard .pic{grid-row:1/4;width:72px;height:72px;border-radius:20px;background:rgba(255,255,255,.7);display:grid;place-items:center}
+.mcard .pic svg{width:54px;height:54px}
+.mcard h2{font:700 18px/1.2 var(--display)}
+.mcard p{color:var(--ink);opacity:.72;font-size:15px}
+.mcard .prog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:6px}
+.mcard .bar{flex:1;height:8px;background:rgba(255,255,255,.75)}
+.mcard .bar i{background:var(--ink);opacity:.55}
+.t0{background:var(--t-peach)}.t1{background:var(--t-sky)}.t2{background:var(--t-lilac)}.t3{background:var(--t-mint)}
+
+/* Mode screen */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.rules h2,.task h2{font:500 12px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.rules li,.task li{position:relative;padding-left:22px;margin-top:6px}
+.rules li::before,.task li::before{content:"";position:absolute;left:4px;top:.6em;width:7px;height:7px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+.tier{margin-top:24px}
+.tier-head{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.tier-head h2{font:700 18px/1.2 var(--display)}
+.tier-head span{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums}
+.lvls{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:10px}
+.lvl{aspect-ratio:1;border-radius:18px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:700 20px/1 var(--display);font-variant-numeric:tabular-nums;transition:transform .15s}
+.lvl.done{background:var(--accent-soft);border-color:transparent}
+.lvl[disabled]{opacity:.45;cursor:default}
+.stars3{display:flex;gap:2px}
+.stars3 svg{width:14px;height:14px;fill:var(--line)}
+.lvl.done .stars3 svg{fill:#fff}
+.stars3 svg.on{fill:var(--gold)!important}
+.locked-note{color:var(--muted);font-size:15px;margin-bottom:12px}
+
+/* Play */
+.play-grid{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:880px){.play-grid{grid-template-columns:minmax(0,1fr) 340px;align-items:start}.board{width:min(100%,640px,calc(100vh - 130px))}}
+.board-wrap{display:grid;place-items:center}
+.board{--n:8;position:relative;width:min(100%,540px,calc(100vh - 460px));min-width:280px;aspect-ratio:1;border-radius:18px;overflow:hidden;box-shadow:0 0 0 6px var(--surface),0 0 0 7px var(--line);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.board.shake{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.sqs{position:absolute;inset:0;display:grid;grid-template-columns:repeat(var(--n),1fr);grid-template-rows:repeat(var(--n),1fr)}
+.sq{position:relative;background:var(--sq-light);cursor:pointer}
+.sq.d{background:var(--sq-dark)}
+.sq .co{position:absolute;font:600 11px/1 var(--body);color:var(--ink);opacity:.38;pointer-events:none}
+.sq .co.f{right:4px;bottom:3px}.sq .co.r{left:4px;top:3px}
+.sq::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .18s}
+.sq.sel::after{opacity:1;background:rgba(196,71,79,.26)}
+.sq.dot::after{opacity:1;inset:36%;border-radius:50%;background:rgba(47,42,61,.22)}
+.sq.ring::after{opacity:1;inset:6%;border-radius:50%;border:4px solid rgba(196,71,79,.6)}
+.sq.danger::after{opacity:1;background:repeating-linear-gradient(45deg,rgba(196,71,79,.3) 0 6px,rgba(196,71,79,.12) 6px 12px)}
+.sq.bad::after{opacity:1;background:rgba(196,71,79,.55);animation:blink .5s 2}
+.sq.hint::after{opacity:1;background:rgba(224,169,63,.55);animation:blink .6s 3}
+@keyframes blink{50%{opacity:.25}}
+.pl{position:absolute;inset:0;pointer-events:none}
+.pc{position:absolute;left:0;top:0;width:calc(100%/var(--n));height:calc(100%/var(--n));transform:translate(calc(var(--c)*100%),calc(var(--r)*100%));transition:transform .3s cubic-bezier(.3,1.25,.5,1);display:grid;place-items:center}
+.pc svg{width:84%;height:84%;transition:transform .22s,opacity .22s;filter:drop-shadow(0 2px 0 rgba(47,42,61,.12))}
+.pc.pop svg{animation:pop .32s cubic-bezier(.3,1.5,.5,1)}
+@keyframes pop{from{transform:scale(.2);opacity:0}}
+.pc.gone svg{transform:scale(.3);opacity:0}
+.pc.star svg{width:62%;height:62%;animation:twinkle 2.4s ease-in-out infinite}
+@keyframes twinkle{50%{transform:scale(1.12) rotate(8deg)}}
+.pw path,.pw circle,.pw ellipse{fill:#fffdf8;stroke:#4b4560;stroke-width:4;stroke-linejoin:round}
+.pb path,.pb circle,.pb ellipse{fill:#4b4560;stroke:#2f2a3d;stroke-width:4;stroke-linejoin:round}
+.pfix path,.pfix circle{fill:#b9b3c9;stroke:#6f6884;stroke-width:4;stroke-linejoin:round}
+.pacc path,.pacc circle,.pacc ellipse{fill:#fffdf8;stroke:var(--accent);stroke-width:4;stroke-linejoin:round}
+svg .eye{fill:#4b4560!important;stroke:none!important}
+.pb .eye{fill:#fffdf8!important}
+
+.side{display:grid;gap:14px}
+.task .goal{font-weight:600;font-size:18px;line-height:1.3;margin-bottom:6px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 14px;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+.pill.key{background:var(--ink);color:#fff;border-color:transparent}
+.msg{min-height:58px;border-radius:16px;padding:14px 16px;background:var(--t-sky);font-weight:500;display:flex;align-items:center}
+.msg.bad{background:var(--accent-soft);color:var(--accent-ink)}
+.msg.good{background:var(--t-mint)}
+.msg.new{animation:msg-in .25s ease-out}
+@keyframes msg-in{from{transform:translateY(6px);opacity:.3}}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{flex:1 1 auto;min-height:50px;padding:0 18px;border-radius:16px;background:var(--surface);border:1px solid var(--line);font-weight:600;transition:transform .15s,background .2s}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn.danger{color:var(--accent-ink)}
+.btn[disabled]{opacity:.45}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;background:rgba(47,42,61,.32);display:none;place-items:center;padding:20px;z-index:10;overflow:auto}
+.overlay.on{display:grid;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.sheet{position:relative;width:min(100%,440px);background:var(--surface);border-radius:28px;padding:28px 24px 24px;text-align:center;animation:sheet .35s cubic-bezier(.3,1.3,.5,1)}
+@keyframes sheet{from{transform:translateY(24px) scale(.94);opacity:0}}
+.sheet h2{font:700 24px/1.2 var(--display);margin:14px 0 6px;text-wrap:balance}
+.sheet p{color:var(--muted)}
+.big-stars{display:flex;justify-content:center;gap:8px}
+.big-stars svg{width:56px;height:56px;fill:var(--line)}
+.big-stars svg.on{fill:var(--gold);animation:star-in .45s cubic-bezier(.3,1.6,.5,1) backwards}
+.big-stars svg.on:nth-child(2){animation-delay:.18s}.big-stars svg.on:nth-child(3){animation-delay:.36s}
+@keyframes star-in{from{transform:scale(0) rotate(-40deg)}}
+.rank-up{margin-top:14px;padding:12px;border-radius:16px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.sheet .btns{margin-top:22px}
+.confetti{position:absolute;left:50%;top:60px;width:10px;height:10px;border-radius:3px;pointer-events:none;animation:confetti 1s ease-out forwards}
+@keyframes confetti{to{transform:translate(var(--dx),var(--dy)) rotate(var(--rot));opacity:0}}
+.sheet.left{text-align:left}
+.sheet.left h2{margin-top:0}
+.field{display:grid;gap:6px;margin-top:16px}
+.field label{font-weight:600;font-size:15px}
+.field small{color:var(--muted)}
+.field input,.field textarea{font:inherit;color:inherit;width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--bg)}
+.field textarea{height:76px;resize:none;font-size:13px;word-break:break-all}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+
+@media (max-width:520px){
+  #app{padding:16px 16px 40px}
+  .hero{grid-template-columns:1fr;justify-items:start;padding:20px}
+  .rank-piece{width:84px;height:84px}.rank-piece svg{width:62px;height:62px}
+  .back span{display:none}.back{padding:0 12px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="screen on" id="home"></section>
+  <section class="screen" id="mode"></section>
+  <section class="screen" id="play"></section>
+</div>
+<div class="overlay" id="win" role="dialog" aria-modal="true" aria-labelledby="win-title"></div>
+<div class="overlay" id="settings" role="dialog" aria-modal="true" aria-labelledby="set-title"></div>
+
+<script>
+/* Chess puzzle engine: shared by the generator (Node) and the page. Boards are arrays of n*n cells, null = empty,
+   uppercase = white, lowercase = black, index = row*n+col with row 0 at the top. */
+(function (root) {
+  const E = {};
+  const R = [[1, 0], [-1, 0], [0, 1], [0, -1]], B = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+  const DIRS = { R: R, B: B, Q: R.concat(B) };
+  const KN = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
+  E.isW = p => p >= 'A' && p <= 'Z';
+
+  // Squares a piece attacks (sliders include the first blocker square).
+  E.reach = function (b, n, i) {
+    const p = b[i], t = p.toUpperCase(), r = (i / n) | 0, c = i % n, out = [];
+    const add = (rr, cc) => { if (rr >= 0 && cc >= 0 && rr < n && cc < n) out.push(rr * n + cc); };
+    if (t === 'N') KN.forEach(d => add(r + d[0], c + d[1]));
+    else if (t === 'K') DIRS.Q.forEach(d => add(r + d[0], c + d[1]));
+    else if (t === 'P') { const dr = E.isW(p) ? -1 : 1; add(r + dr, c - 1); add(r + dr, c + 1); }
+    else DIRS[t].forEach(d => {
+      let rr = r + d[0], cc = c + d[1];
+      while (rr >= 0 && cc >= 0 && rr < n && cc < n) { out.push(rr * n + cc); if (b[rr * n + cc]) break; rr += d[0]; cc += d[1]; }
+    });
+    return out;
+  };
+  E.attackers = function (b, n, sq, byWhite) {
+    const out = [];
+    for (let i = 0; i < b.length; i++) { const p = b[i]; if (p && E.isW(p) === byWhite && E.reach(b, n, i).includes(sq)) out.push(i); }
+    return out;
+  };
+  E.attacked = (b, n, sq, byWhite) => E.attackers(b, n, sq, byWhite).length > 0;
+  E.inCheck = (b, n, white) => E.attacked(b, n, b.indexOf(white ? 'K' : 'k'), !white);
+  E.pseudo = function (b, n, i) {
+    const p = b[i], w = E.isW(p), out = [];
+    if (p.toUpperCase() === 'P') {
+      const r = (i / n) | 0, c = i % n, dr = w ? -1 : 1, r1 = r + dr;
+      if (r1 >= 0 && r1 < n) {
+        if (!b[r1 * n + c]) {
+          out.push(r1 * n + c);
+          const r2 = r + 2 * dr;
+          if (r === (w ? n - 2 : 1) && r2 >= 0 && r2 < n && !b[r2 * n + c]) out.push(r2 * n + c);
+        }
+        for (const cc of [c - 1, c + 1]) if (cc >= 0 && cc < n) { const q = b[r1 * n + cc]; if (q && E.isW(q) !== w) out.push(r1 * n + cc); }
+      }
+      return out;
+    }
+    for (const j of E.reach(b, n, i)) { const q = b[j]; if (!q || E.isW(q) !== w) out.push(j); }
+    return out;
+  };
+  E.apply = function (b, n, from, to) {
+    const nb = b.slice(); let p = nb[from]; nb[from] = null;
+    const r = (to / n) | 0;
+    if (p === 'P' && r === 0) p = 'Q';
+    if (p === 'p' && r === n - 1) p = 'q';
+    nb[to] = p; return nb;
+  };
+  E.legal = function (b, n, white, from) {
+    const out = [];
+    for (let i = 0; i < b.length; i++) {
+      if (from !== undefined && i !== from) continue;
+      const p = b[i]; if (!p || E.isW(p) !== white) continue;
+      for (const j of E.pseudo(b, n, i)) if (!E.inCheck(E.apply(b, n, i, j), n, white)) out.push([i, j]);
+    }
+    return out;
+  };
+  E.isMate = (b, n, white) => E.inCheck(b, n, white) && E.legal(b, n, white).length === 0;
+  E.mates1 = (b, n) => E.legal(b, n, true).filter(m => E.isMate(E.apply(b, n, m[0], m[1]), n, false));
+  // Does white's move m force mate on the next move against every reply?
+  E.forces2 = function (b, n, m) {
+    const nb = E.apply(b, n, m[0], m[1]), rep = E.legal(nb, n, false);
+    if (!rep.length) return { ok: false, stale: !E.inCheck(nb, n, false) };
+    for (const r of rep) if (!E.mates1(E.apply(nb, n, r[0], r[1]), n).length) return { ok: false, refute: r };
+    return { ok: true };
+  };
+
+  /* Solo: every move is a capture, one piece must remain. */
+  E.soloMoves = function (b, n, from) {
+    const out = [];
+    for (let i = 0; i < b.length; i++) { if (!b[i] || (from !== undefined && i !== from)) continue; for (const j of E.reach(b, n, i)) if (b[j]) out.push([i, j]); }
+    return out;
+  };
+  E.soloApply = (b, from, to) => { const nb = b.slice(); nb[to] = nb[from]; nb[from] = null; return nb; };
+  E.soloSolve = function (b, n) {
+    const memo = new Map();
+    const rec = function (b) {
+      const k = b.map(x => x || '.').join('');
+      if (memo.has(k)) return memo.get(k);
+      let res = null;
+      if (b.filter(Boolean).length === 1) res = [];
+      else for (const m of E.soloMoves(b, n)) { const s = rec(E.soloApply(b, m[0], m[1])); if (s) { res = [m].concat(s); break; } }
+      memo.set(k, res); return res;
+    };
+    return rec(b);
+  };
+
+  /* Knight route: guards never move; the knight may not land on a guard or on a square a guard attacks. */
+  E.routeDanger = function (g, n) {
+    const s = new Set();
+    g.forEach((p, i) => { if (p) E.reach(g, n, i).forEach(j => s.add(j)); });
+    return s;
+  };
+  E.knightTargets = function (n, pos) {
+    const r = (pos / n) | 0, c = pos % n, out = [];
+    KN.forEach(d => { const rr = r + d[0], cc = c + d[1]; if (rr >= 0 && cc >= 0 && rr < n && cc < n) out.push(rr * n + cc); });
+    return out;
+  };
+  // Shortest path collecting all stars; returns array of squares after start, or null.
+  E.routeSolve = function (g, n, start, stars, danger) {
+    const K = stars.length, full = (1 << K) - 1, W = 1 << K;
+    const prev = new Map(), s0 = start * W; prev.set(s0, -1);
+    let q = [s0];
+    while (q.length) {
+      const nq = [];
+      for (const s of q) {
+        const pos = (s / W) | 0, mask = s % W;
+        if (mask === full) { const path = []; let x = s; while (prev.get(x) !== -1) { path.push((x / W) | 0); x = prev.get(x); } return path.reverse(); }
+        for (const t of E.knightTargets(n, pos)) {
+          if (g[t] || danger.has(t)) continue;
+          const si = stars.indexOf(t), ns = t * W + (si >= 0 ? mask | (1 << si) : mask);
+          if (!prev.has(ns)) { prev.set(ns, s); nq.push(ns); }
+        }
+      }
+      q = nq;
+    }
+    return null;
+  };
+
+  /* Queens */
+  E.qHit = (n, a, b) => { const ra = (a / n) | 0, ca = a % n, rb = (b / n) | 0, cb = b % n; return ra === rb || ca === cb || Math.abs(ra - rb) === Math.abs(ca - cb); };
+  E.queensAll = function (n, qs, limit) {
+    const res = [], rows = new Set(qs.map(q => (q / n) | 0)), cur = qs.slice();
+    const rec = function (r) {
+      if (res.length >= limit) return;
+      if (r === n) { res.push(cur.slice()); return; }
+      if (rows.has(r)) return rec(r + 1);
+      for (let c = 0; c < n; c++) { const sq = r * n + c; if (cur.every(q => !E.qHit(n, q, sq))) { cur.push(sq); rec(r + 1); cur.pop(); } }
+    };
+    for (let i = 0; i < qs.length; i++) for (let j = i + 1; j < qs.length; j++) if (E.qHit(n, qs[i], qs[j])) return res;
+    rec(0); return res;
+  };
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = E; else root.E = E;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+const DATA = {"mate":[[{"b":".....K.k............B.....................R.....................","n":1},{"b":".......k...R.K.......N...................p......................","n":1},{"b":"...R...............p............k.K..B..........................","n":1},{"b":".............................K........BkR.......................","n":1},{"b":"........k.K........R................R..p........................","n":1},{"b":"........................B..................K.........R.....k....","n":1},{"b":"k.........K.................R...........p.....N.................","n":1},{"b":".Q............pk.............K.......R..........................","n":1},{"b":".K....k.R.................................................R.....","n":1},{"b":"......Q........................N.....K.k.....p..................","n":1},{"b":".........p.......R...........K..........k..................R....","n":1},{"b":"..........p..K...........R.........R............k...............","n":1}],[{"b":"..........N...K..R.....p.............p.r...R............k....B..","n":1},{"b":".........p.Q..............p.....P...P........K....r..........k..","n":1},{"b":"Q..K.............N.k.............p.p....n..B.....P..............","n":1},{"b":"..k.....R.p.....................N.....r...B...QK...........b....","n":1},{"b":"......k.....K.......P....p.......r..........Q..................R","n":1},{"b":".......bR.....B.............R..pn................Q...K.k........","n":1},{"b":"............B..................krp...K..n.........Q....P........","n":1},{"b":"......K.p.B.............N.....b.........kp..Q...................","n":1},{"b":"........R......p..RpQ....n.......k.........................K....","n":1},{"b":"...B............K..........RQ....Pk......b....n.................","n":1},{"b":".........pK...b....R.........p........B..............Q..k......B","n":1},{"b":"..........Q.........k.......P....n....K....N....R...r...........","n":1}],[{"b":".......K..R.............R...................B.p..k..............","n":2},{"b":"................................PR........K................k....","n":2},{"b":"....................N.......R........K.........k................","n":2},{"b":".R.............................K...........p...k...R...P........","n":2},{"b":"..k..............R..................................KR..........","n":2},{"b":"..k..................Q..N....K....................P.............","n":2},{"b":"...............................N.......k.K.Q....................","n":2},{"b":".......................R.R......P.........k.........K...........","n":2},{"b":"....R............................R........p.K..............Bk...","n":2},{"b":"....k...................K.R...N............p...........Q........","n":2},{"b":"...........N.................R.........................kK...Q...","n":2},{"b":"...............R............K.........Q.........k...............","n":2}]],"route":[[{"n":6,"g":".....................n....r.........","s":22,"st":[16],"max":3},{"n":6,"g":".b........q..................p......","s":19,"st":[18],"max":3},{"n":6,"g":"..................k........p........","s":22,"st":[16],"max":3},{"n":6,"g":".n...............r..................","s":8,"st":[31],"max":3},{"n":6,"g":"...........................nn....b..","s":4,"st":[2],"max":4},{"n":6,"g":"................p........b..........","s":11,"st":[4],"max":4},{"n":6,"g":"n.....b....p........................","s":21,"st":[26],"max":4},{"n":6,"g":"..nr.......r........................","s":20,"st":[22],"max":4},{"n":6,"g":"...n................p...............","s":32,"st":[35],"max":5},{"n":6,"g":".................q......p...p.......","s":6,"st":[7],"max":5},{"n":6,"g":"......p....................n........","s":3,"st":[0],"max":5},{"n":6,"g":"..........n......................n.k","s":7,"st":[1],"max":5}],[{"n":8,"g":".................pp................n..........................r.","s":34,"st":[44,0],"max":6},{"n":8,"g":".............................q..........n...........n.......r...","s":18,"st":[8,14],"max":7},{"n":8,"g":"...b..................................p...p....b.b..............","s":48,"st":[19,41],"max":7},{"n":8,"g":"...............n........r..................p....r.b.............","s":53,"st":[23,11],"max":7},{"n":8,"g":"....k........p....................p................k............","s":28,"st":[33,63],"max":7},{"n":8,"g":".............p........p......................r.....b........n...","s":35,"st":[15,52],"max":7},{"n":8,"g":"....................br...............................r....b.....","s":19,"st":[57,12],"max":8},{"n":8,"g":"............b................r...........n...nr.................","s":42,"st":[50,1],"max":8},{"n":8,"g":"...........b..........p.b................................r..n...","s":63,"st":[16,37],"max":8},{"n":8,"g":"......q..........r................................b........n....","s":26,"st":[55,58],"max":8},{"n":8,"g":"........r................n.................k.........n..........","s":58,"st":[31,55],"max":8},{"n":8,"g":"......r.......p.n....r...........r..............................","s":43,"st":[63,12],"max":9}],[{"n":8,"g":"......kn.r......................b...........................n...","s":27,"st":[51,38,35],"max":9},{"n":8,"g":"..............n.......kq..........p..........................r..","s":11,"st":[38,46,12],"max":9},{"n":8,"g":".........b....n........b....................p.........b.........","s":25,"st":[39,42,15],"max":9},{"n":8,"g":"........r.......................p.pb...p.........bb.............","s":55,"st":[38,27,18],"max":9},{"n":8,"g":"................p............nn...........r................b....","s":60,"st":[6,11,4],"max":9},{"n":8,"g":"r........p.........b....................p..............p......kr","s":57,"st":[15,22,11],"max":10},{"n":8,"g":"............r.r...k...k.......qb...............b................","s":42,"st":[1,43,41],"max":11},{"n":8,"g":"..n..................b.........b....n.................p.........","s":62,"st":[0,47,9],"max":11},{"n":8,"g":".......b.....p.......................b....n......q..............","s":3,"st":[60,16,5],"max":12},{"n":8,"g":".b.......n.................p..............p...........k....q....","s":16,"st":[7,0,29],"max":12},{"n":8,"g":".n.n..n.............q.......................n..........k........","s":49,"st":[53,5,42],"max":12},{"n":8,"g":"..................r.........bp.........r.......................b","s":57,"st":[8,59,60],"max":13}]],"queens":[[{"n":4,"f":[11]},{"n":4,"f":[]},{"n":5,"f":[14,23]},{"n":5,"f":[6,17]},{"n":5,"f":[4,7]},{"n":5,"f":[3]},{"n":5,"f":[16]},{"n":5,"f":[23]},{"n":6,"f":[1,17,34]},{"n":6,"f":[2,24,33]},{"n":6,"f":[1,9]},{"n":6,"f":[17,34]}],[{"n":6,"f":[17]},{"n":6,"f":[19]},{"n":6,"f":[2]},{"n":6,"f":[]},{"n":7,"f":[10,21,39]},{"n":7,"f":[13,21,47]},{"n":7,"f":[5,10,43]},{"n":7,"f":[31,46]},{"n":7,"f":[13,33]},{"n":7,"f":[34,43]},{"n":7,"f":[13,46]},{"n":7,"f":[42]}],[{"n":8,"f":[4,29,42,62]},{"n":8,"f":[25,35,54,60]},{"n":8,"f":[3,40,50]},{"n":8,"f":[4,19,39]},{"n":8,"f":[14,32,57]},{"n":8,"f":[14,17,36]},{"n":8,"f":[5,11]},{"n":8,"f":[3,46]},{"n":8,"f":[31,51]},{"n":8,"f":[26,45]},{"n":8,"f":[1,30]},{"n":8,"f":[63]}]],"solo":[[{"n":4,"b":".....N.N......Q."},{"n":4,"b":"N.R.........Q..."},{"n":4,"b":"B..R......Q....."},{"n":4,"b":"......P......QK."},{"n":4,"b":"...BR....Q......"},{"n":4,"b":"....N.....P..N.."},{"n":4,"b":"..B......RQ....."},{"n":4,"b":"N...R....K......"},{"n":4,"b":".Q.K...N.....R.."},{"n":4,"b":"....P.R..R..B..."},{"n":4,"b":".........QR..NR."},{"n":4,"b":".....N.B.Q....B."}],[{"n":5,"b":"......P..NPKN............"},{"n":5,"b":"..RN..B.NP..............."},{"n":5,"b":"...N.........K....P.Q..R."},{"n":5,"b":".Q.K.....B.........P.R..."},{"n":5,"b":"......R.N...PQ........K.."},{"n":5,"b":"..N....B.......R.K.....P."},{"n":5,"b":"N............NK........QR"},{"n":5,"b":"......NNQ.RP............R"},{"n":5,"b":".R..Q......K.N...N.....B."},{"n":5,"b":"....K......PBN.RR........"},{"n":5,"b":"N....PK...........B..P.R."},{"n":5,"b":".....BKN...N..PR........."}],[{"n":6,"b":".....K.N..R.........B..P........R.N."},{"n":6,"b":"...KR.......P.P.......N.....Q......B"},{"n":6,"b":"......B.N.K....Q.B...R.......P......"},{"n":6,"b":"......R......K..P..B.P......N.....Q."},{"n":6,"b":".............K........PQR......R..PN"},{"n":6,"b":"............P.K.P.........N..B..B.Q."},{"n":6,"b":"........R...N..N..R..B.P......B....."},{"n":6,"b":"......N.............PR...BB.P...N..."},{"n":6,"b":"...B..............P.Q..R.....R.B..N."},{"n":6,"b":"....RK..B..BN.....R......N...P......"},{"n":6,"b":"..........B....P.R...N..PK....B....N"},{"n":6,"b":".....N..P......K....N...R.R.Q..P...."}]]};
+const E = window.E;
+const $ = s => document.querySelector(s);
+const FILES = 'abcdefgh';
+const sqName = (n, i) => FILES[i % n] + (n - ((i / n) | 0));
+const PNAME = { K: 'король', Q: 'ферзь', R: 'ладья', B: 'слон', N: 'конь', P: 'пешка' };
+const PSHORT = { K: 'Кр', Q: 'Ф', R: 'Л', B: 'С', N: 'К', P: '' };
+const plural = (n, f) => { const a = n % 10, b = n % 100; return f[a === 1 && b !== 11 ? 0 : a >= 2 && a <= 4 && (b < 12 || b > 14) ? 1 : 2]; };
+const STAR = 'M12 2.2l3 6.3 6.8.9-5 4.8 1.3 6.8L12 17.7 5.9 21l1.3-6.8-5-4.8 6.8-.9z';
+const starSvg = on => `<svg viewBox="0 0 24 24" class="${on ? 'on' : ''}" aria-hidden="true"><path d="${STAR}"/></svg>`;
+const stars3 = k => `<span class="stars3">${[1, 2, 3].map(i => starSvg(i <= k)).join('')}</span>`;
+
+/* Pieces: simple original silhouettes on a 100×100 grid */
+const BASE = '<path d="M22 90h56v-7q0-7-8-7H30q-8 0-8 7z"/>';
+const SHAPES = {
+  P: '<path d="M37 76q11-20 5-32h16q-6 12 5 32z"/><circle cx="50" cy="31" r="14"/>' + BASE,
+  R: '<path d="M33 76l3-38h28l3 38z"/><path d="M27 14h11v9h7v-9h10v9h7v-9h11v24H27z"/>' + BASE,
+  B: '<path d="M37 76q9-14 5-26h16q-4 12 5 26z"/><ellipse cx="50" cy="35" rx="14" ry="19"/><circle cx="50" cy="12" r="5.5"/>' + BASE,
+  N: '<path d="M30 76C30 58 40 50 46 42L34 48C28 51 21 45 25 39L42 20 44 9 53 18C69 22 75 46 70 76z"/><circle class="eye" cx="43" cy="31" r="3"/>' + BASE,
+  Q: '<path d="M23 32l11 44h32l11-44-15 19-12-29-12 29z"/><circle cx="23" cy="27" r="6"/><circle cx="50" cy="17" r="6"/><circle cx="77" cy="27" r="6"/>' + BASE,
+  K: '<path d="M30 44q20-13 40 0l-6 32H36z"/><path d="M45 6h10v8h8v10h-8v10H45V24h-8V14h8z"/>' + BASE,
+};
+const pieceSvg = (p, cls) => p === '*'
+  ? `<svg viewBox="0 0 24 24"><path d="${STAR}" fill="#e0a93f" stroke="#b98626" stroke-width="1.2" stroke-linejoin="round"/></svg>`
+  : `<svg viewBox="0 0 100 100" class="${cls || (E.isW(p) ? 'pw' : 'pb')}">${SHAPES[p.toUpperCase()]}</svg>`;
+
+/* ---------- Saved progress ---------- */
+const KEY = 'chess-puzzles-v1';
+let S = { name: 'Тихон', done: {}, streak: { last: '', n: 0 } };
+const load = () => { try { const r = localStorage.getItem(KEY); if (r) S = Object.assign(S, JSON.parse(r)); } catch (e) {} };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const dayStr = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+const pid = (m, t, i) => m + '-' + t + '-' + i;
+const totalStars = () => Object.values(S.done).reduce((a, b) => a + b, 0);
+const RANKS = [[0, 'Пешка', 'P'], [25, 'Конь', 'N'], [70, 'Слон', 'B'], [130, 'Ладья', 'R'], [210, 'Ферзь', 'Q'], [300, 'Король', 'K'], [400, 'Гроссмейстер', 'K']];
+const rankIdx = st => { let k = 0; RANKS.forEach((r, i) => { if (st >= r[0]) k = i; }); return k; };
+const streakNow = () => { const y = new Date(); y.setDate(y.getDate() - 1); return S.streak.last === dayStr(new Date()) || S.streak.last === dayStr(y) ? S.streak.n : 0; };
+
+const MODES = [
+  { id: 'mate', title: 'Мат', sub: 'Найди ход, после которого королю некуда деться', icon: 'K',
+    rules: ['Белые ходят первыми и ставят мат.', 'На лёгком и среднем уровне нужен мат в один ход, на сложном — в два.', 'Мат: король под шахом и не может ни уйти, ни закрыться, ни побить.'] },
+  { id: 'route', title: 'Маршрут коня', sub: 'Собери звёзды и не попади под удар', icon: 'N',
+    rules: ['Конь должен собрать все звёзды за указанное число ходов.', 'Нельзя вставать на клетки, которые бьют чёрные фигуры.', 'Чёрные фигуры стоят на месте. Брать их нельзя.', 'На лёгком уровне точки показывают ходы коня, дальше — без точек.'] },
+  { id: 'queens', title: 'Ферзи', sub: 'Расставь ферзей, чтобы никто никого не бил', icon: 'Q',
+    rules: ['Поставь ферзей так, чтобы их стало столько, сколько клеток в стороне доски.', 'Ни один ферзь не должен бить другого: ни по линии, ни по диагонали.', 'Серые ферзи закреплены, их двигать нельзя.', 'Снять своего ферзя можно, но это считается ошибкой.'] },
+  { id: 'solo', title: 'Съешь всех', sub: 'Каждый ход — взятие, остаться должна одна фигура', icon: 'R',
+    rules: ['Каждый ход — взятие: фигура бьёт другую и встаёт на её место.', 'Фигуры ходят как в шахматах. Пешка бьёт по диагонали вверх.', 'В конце на доске должна остаться одна фигура.', 'Отмена хода считается ошибкой.'] },
+];
+const TIERS = ['Лёгкий', 'Средний', 'Сложный'];
+const NEED = 8;
+const PER = 12;
+const solvedIn = (m, t) => DATA[m][t].filter((_, i) => S.done[pid(m, t, i)]).length;
+const tierOpen = (m, t) => t === 0 || solvedIn(m, t - 1) >= NEED;
+const modeStars = m => [0, 1, 2].reduce((a, t) => a + DATA[m][t].reduce((x, _, i) => x + (S.done[pid(m, t, i)] || 0), 0), 0);
+
+/* ---------- Navigation ---------- */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  window.scrollTo(0, 0);
+}
+const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+const ICON_GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8"/></svg>';
+
+function renderHome() {
+  const st = totalStars(), ri = rankIdx(st), rank = RANKS[ri], next = RANKS[ri + 1];
+  const solved = Object.keys(S.done).length, sn = streakNow();
+  const pct = next ? Math.round((st - rank[0]) / (next[0] - rank[0]) * 100) : 100;
+  $('#home').innerHTML = `
+  <header class="top"><div class="brand">Шахматные <b>головоломки</b></div>
+    <button class="icon-btn" id="gear" aria-label="Настройки">${ICON_GEAR}</button></header>
+  <div class="hero">
+    <div class="rank-piece">${pieceSvg(rank[2], 'pacc')}</div>
+    <div><p class="hello">Привет, ${esc(S.name)}!</p>
+      <h1>Твоё звание: <em>${rank[1]}</em></h1>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <p class="next">${next ? `До звания «${next[1]}» ${plural(next[0] - st, ['осталась', 'осталось', 'осталось'])} ${next[0] - st} ${plural(next[0] - st, ['звезда', 'звезды', 'звёзд'])}` : 'Это высшее звание'}</p></div>
+    <ul class="stats">
+      <li><b>${st}</b>${plural(st, ['звезда', 'звезды', 'звёзд'])} из ${PER * 36}</li>
+      <li><b>${solved}</b>${plural(solved, ['задача решена', 'задачи решены', 'задач решено'])} из ${PER * 12}</li>
+      <li><b>${sn}</b>${plural(sn, ['день', 'дня', 'дней'])} подряд</li>
+    </ul>
+  </div>
+  <div class="modes">${MODES.map((m, i) => { const ms = modeStars(m.id); return `
+    <button class="mcard t${i}" data-mode="${m.id}">
+      <span class="pic">${pieceSvg(m.icon, 'pw')}</span>
+      <h2>${m.title}</h2><p>${m.sub}</p>
+      <span class="prog"><span class="bar"><i style="width:${ms / (PER * 9) * 100}%"></i></span>${ms} / ${PER * 9}</span>
+    </button>`; }).join('')}</div>`;
+  show('home');
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderMode(id) {
+  const m = MODES.find(x => x.id === id);
+  $('#mode').innerHTML = `
+  <header class="top"><button class="back" data-go="home">${ICON_BACK}<span>Назад</span></button>
+    <div class="head-title"><h1>${m.title}</h1><p>${m.sub}</p></div></header>
+  <div class="card rules"><h2>Правила</h2><ul>${m.rules.map(r => `<li>${r}</li>`).join('')}
+    <li>Три звезды — решил без ошибок и подсказок. Две — не больше двух ошибок. Одна — решил.</li></ul></div>
+  ${TIERS.map((t, ti) => { const open = tierOpen(id, ti); return `
+    <div class="tier"><div class="tier-head"><h2>${t}</h2><span>${solvedIn(id, ti)} из ${PER}</span></div>
+    ${open ? '' : `<p class="locked-note">Откроется, когда решишь ${NEED} задач уровня «${TIERS[ti - 1]}».</p>`}
+    <div class="lvls">${DATA[id][ti].map((_, i) => { const s = S.done[pid(id, ti, i)] || 0; return `
+      <button class="lvl ${s ? 'done' : ''}" ${open ? '' : 'disabled'} data-play="${id},${ti},${i}" aria-label="Задача ${i + 1}, ${t}">${i + 1}${stars3(s)}</button>`; }).join('')}</div></div>`; }).join('')}`;
+  show('mode');
+}
+
+/* ---------- Board ---------- */
+const board = {
+  init(n) {
+    this.n = n; this.pcs = {};
+    const el = $('#board'); el.style.setProperty('--n', n);
+    let h = '<div class="sqs">';
+    for (let i = 0; i < n * n; i++) {
+      const r = (i / n) | 0, c = i % n;
+      h += `<div class="sq ${(r + c) % 2 ? 'd' : ''}" data-i="${i}">${c === 0 ? `<span class="co r">${n - r}</span>` : ''}${r === n - 1 ? `<span class="co f">${FILES[c]}</span>` : ''}</div>`;
+    }
+    el.innerHTML = h + '</div><div class="pl"></div>';
+    this.sqs = [...el.querySelectorAll('.sq')]; this.pl = el.querySelector('.pl');
+  },
+  set(arr, clsFn) { this.pl.innerHTML = ''; this.pcs = {}; arr.forEach((p, i) => { if (p) this.put(i, p, clsFn && clsFn(i, p), false); }); },
+  put(sq, p, cls, anim) {
+    const d = document.createElement('div');
+    d.className = 'pc' + (p === '*' ? ' star' : '') + (anim ? ' pop' : '');
+    d.style.setProperty('--r', (sq / this.n) | 0); d.style.setProperty('--c', sq % this.n);
+    d.innerHTML = pieceSvg(p, cls); this.pl.appendChild(d); this.pcs[sq] = d;
+  },
+  take(sq) { const d = this.pcs[sq]; if (!d) return; delete this.pcs[sq]; d.classList.add('gone'); setTimeout(() => d.remove(), 240); },
+  move(from, to) {
+    this.take(to); const d = this.pcs[from]; if (!d) return; delete this.pcs[from]; this.pcs[to] = d;
+    d.style.zIndex = 2; d.style.setProperty('--r', (to / this.n) | 0); d.style.setProperty('--c', to % this.n);
+  },
+  mark(sq, cls) { this.sqs[sq].classList.add(cls); },
+  clear(...cls) { this.sqs.forEach(s => s.classList.remove(...cls)); },
+  flash(sq, cls, ms) { const s = this.sqs[sq]; s.classList.remove(cls); void s.offsetWidth; s.classList.add(cls); setTimeout(() => s.classList.remove(cls), ms || 1100); },
+  shake() { const el = $('#board'); el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); },
+};
+
+/* ---------- Game ---------- */
+const G = {};
+const parse = s => [...s].map(x => x === '.' ? null : x);
+function taskText() {
+  const p = G.p;
+  if (G.mode === 'mate') return p.n === 1
+    ? ['Белые ходят и ставят мат в один ход.', ['Сделай один ход белой фигурой.', 'После него чёрному королю должен быть мат.']]
+    : ['Белые ходят и ставят мат в два хода.', ['Сначала ходишь ты, потом отвечают чёрные, потом ты ставишь мат.', 'Первый ход должен работать при любом ответе чёрных.']];
+  if (G.mode === 'route') return [`Собери конём ${['', 'звезду', 'обе звезды', 'все три звезды'][p.st.length]} не больше чем за ${p.max} ${plural(p.max, ['ход', 'хода', 'ходов'])}.`,
+    ['Нельзя вставать на клетки, которые бьют чёрные фигуры.', 'Чёрные фигуры стоят на месте. Брать их нельзя.']];
+  if (G.mode === 'queens') { const k = p.n - p.f.length; return [`Поставь ещё ${k} ${plural(k, ['ферзя', 'ферзей', 'ферзей'])}, чтобы всего стало ${p.n}.`,
+    ['Ни один ферзь не должен бить другого: ни по линии, ни по диагонали.', p.f.length ? 'Серые ферзи закреплены, их двигать нельзя.' : 'Снять своего ферзя можно, но это ошибка.']]; }
+  return ['Оставь на доске одну фигуру.', ['Каждый ход — взятие: фигура бьёт другую и встаёт на её место.', 'Фигуры ходят как в шахматах. Пешка бьёт по диагонали вверх.']];
+}
+function startPuzzle(mode, tier, idx) {
+  Object.assign(G, { mode, tier, idx, p: DATA[mode][tier][idx], mist: 0, hints: 0, won: false });
+  const m = MODES.find(x => x.id === mode), [goal, rules] = taskText();
+  const title = mode === 'mate' ? (G.p.n === 1 ? 'Мат в один ход' : 'Мат в два хода') : m.title;
+  $('#play').innerHTML = `
+  <header class="top"><button class="back" data-go="mode">${ICON_BACK}<span>К задачам</span></button>
+    <div class="head-title"><h1>${title}</h1><p>${TIERS[tier]} уровень, задача ${idx + 1} из ${PER}</p></div></header>
+  <div class="play-grid">
+    <div class="board-wrap"><div class="board" id="board"></div></div>
+    <div class="side">
+      <div class="card task"><h2>Задание</h2><p class="goal">${goal}</p><ul>${rules.map(r => `<li>${r}</li>`).join('')}</ul></div>
+      <div class="pills" id="pills"></div>
+      <div class="msg" id="msg" aria-live="polite"></div>
+      <div class="btns">
+        <button class="btn" id="b-hint">Подсказка</button>
+        ${mode === 'solo' ? '<button class="btn" id="b-undo">Отменить ход</button>' : ''}
+        <button class="btn" id="b-reset">Сначала</button>
+      </div>
+    </div>
+  </div>`;
+  resetPuzzle(true);
+  show('play');
+}
+function say(t, kind) { const m = $('#msg'); m.textContent = t; m.className = 'msg new ' + (kind || ''); void m.offsetWidth; }
+function pills() {
+  const p = G.p, a = [];
+  if (G.mode === 'mate' && p.n === 2) a.push(['Ход ' + (G.step + 1) + ' из 2', 1]);
+  if (G.mode === 'route') { a.push(['Ходов осталось: ' + G.left, 1]); a.push(['Звёзд: ' + G.got.length + ' из ' + p.st.length]); }
+  if (G.mode === 'queens') a.push(['Ферзей: ' + (p.f.length + G.q.length) + ' из ' + p.n, 1]);
+  if (G.mode === 'solo') a.push(['Фигур осталось: ' + G.b.filter(Boolean).length, 1]);
+  a.push(['Ошибок: ' + G.mist]); a.push(['Подсказок: ' + G.hints]);
+  $('#pills').innerHTML = a.map(x => `<span class="pill ${x[1] ? 'key' : ''}">${x[0]}</span>`).join('');
+  const u = $('#b-undo'); if (u) u.disabled = !G.hist.length;
+}
+function deselect() { G.sel = null; G.targets = []; board.clear('sel', 'dot', 'ring'); if (G.mode === 'route' && G.tier === 0 && !G.won) routeDots(); }
+function select(sq, targets, occ) {
+  board.clear('sel', 'dot', 'ring'); G.sel = sq; G.targets = targets; board.mark(sq, 'sel');
+  targets.forEach(t => board.mark(t, occ(t) ? 'ring' : 'dot'));
+}
+function routeDots() { board.clear('dot'); E.knightTargets(G.p.n, G.pos).forEach(t => { if (!G.g[t]) board.mark(t, 'dot'); }); }
+function resetPuzzle(silent) {
+  const p = G.p;
+  if (!silent && G.dirty) G.mist++;
+  Object.assign(G, { busy: false, sel: null, targets: [], dirty: false, hist: [] });
+  clearTimeout(G.timer);
+  if (G.mode === 'mate') { G.b = parse(p.b); G.step = 0; board.init(8); board.set(G.b); say(p.n === 1 ? 'Выбери белую фигуру и поставь мат.' : 'Найди первый ход. Подумай, как ответят чёрные.'); }
+  if (G.mode === 'route') {
+    G.g = parse(p.g); G.pos = p.s; G.got = []; G.left = p.max; G.danger = E.routeDanger(G.g, p.n);
+    board.init(p.n); const arr = G.g.slice(); p.st.forEach(s => arr[s] = '*'); arr[p.s] = 'N'; board.set(arr);
+    if (G.tier === 0) routeDots();
+    say('Нажми на клетку, куда пойдёт конь.');
+  }
+  if (G.mode === 'queens') { G.q = []; board.init(p.n); const arr = new Array(p.n * p.n).fill(null); p.f.forEach(s => arr[s] = 'Q'); board.set(arr, () => 'pfix'); say('Нажми на пустую клетку, чтобы поставить ферзя.'); }
+  if (G.mode === 'solo') { G.b = parse(p.b); board.init(p.n); board.set(G.b); say('Выбери фигуру, потом ту, которую она бьёт.'); }
+  pills();
+}
+const later = (f, ms) => { G.timer = setTimeout(f, ms); };
+
+function tap(sq) {
+  if (G.busy || G.won) return;
+  ({ mate: tapMate, route: tapRoute, queens: tapQueens, solo: tapSolo })[G.mode](sq);
+  pills();
+}
+/* Mate */
+function tapMate(sq) {
+  if (G.sel != null && G.targets.includes(sq)) return mateMove(G.sel, sq);
+  const p = G.b[sq];
+  if (p && E.isW(p)) select(sq, E.legal(G.b, 8, true, sq).map(m => m[1]), t => G.b[t]); else deselect();
+}
+function whyNotMate(nb) {
+  const rep = E.legal(nb, 8, false);
+  if (!E.inCheck(nb, 8, false)) return [rep.length ? 'Шаха нет. Нужен ход, после которого чёрному королю мат.' : 'Это пат: шаха нет, а ходов у чёрных не осталось. Ничья, а нужен мат.'];
+  const r = rep.find(m => nb[m[0]] === 'k') || rep[0], t = nb[r[0]].toUpperCase(), s = sqName(8, r[1]);
+  if (t === 'K') return [nb[r[1]] ? `Шах, но не мат: король бьёт на ${s}.` : `Шах, но не мат: король уходит на ${s}.`, r[1]];
+  return [nb[r[1]] ? `Шах, но не мат: ${PNAME[t]} бьёт на ${s}.` : `Шах, но не мат: ${PNAME[t]} закрывает короля на ${s}.`, r[1]];
+}
+function mateMove(from, to) {
+  deselect(); G.busy = true;
+  const before = G.b, nb = E.apply(before, 8, from, to), last = G.p.n === 1 || G.step === 1;
+  board.move(from, to);
+  const fail = (msg, sq) => {
+    G.mist++; say(msg, 'bad'); board.shake(); if (sq != null) board.flash(sq, 'hint', 1500); pills();
+    later(() => { board.set(before); G.busy = false; }, 900);
+  };
+  later(() => {
+    if (nb[to] !== before[from]) board.set(nb);
+    if (E.isMate(nb, 8, false)) { G.b = nb; return win(); }
+    if (last) return fail(...whyNotMate(nb));
+    const r = E.forces2(before, 8, [from, to]);
+    if (!r.ok) {
+      if (!r.refute) return fail(...whyNotMate(nb));
+      const pc = nb[r.refute[0]].toUpperCase();
+      return fail(`После этого хода чёрные ответят ${PSHORT[pc]}${sqName(8, r.refute[1])}, и мата следующим ходом нет.`, r.refute[1]);
+    }
+    G.b = nb; G.dirty = true; say('Сильный ход! Чёрные отвечают…', 'good');
+    later(() => {
+      const reps = E.legal(nb, 8, false), rp = reps[Math.floor(Math.random() * reps.length)];
+      board.move(rp[0], rp[1]); G.b = E.apply(nb, 8, rp[0], rp[1]);
+      later(() => { board.set(G.b); G.step = 1; G.busy = false; say('Теперь поставь мат одним ходом.'); pills(); }, 350);
+    }, 650);
+  }, 380);
+}
+/* Knight route */
+function tapRoute(sq) {
+  const p = G.p, n = p.n;
+  if (sq === G.pos) return;
+  if (!E.knightTargets(n, G.pos).includes(sq)) return say('Конь ходит буквой Г: две клетки прямо и одна вбок.');
+  if (G.g[sq]) { board.flash(sq, 'bad'); return say('Чёрные фигуры брать нельзя.', 'bad'); }
+  if (G.danger.has(sq)) {
+    G.mist++; const att = E.attackers(G.g, n, sq, false);
+    board.flash(sq, 'bad'); att.forEach(a => board.flash(a, 'bad')); board.shake();
+    return say(`Клетку ${sqName(n, sq)} бьёт ${PNAME[G.g[att[0]].toUpperCase()]} на ${sqName(n, att[0])}. Туда нельзя.`, 'bad');
+  }
+  G.dirty = true; board.move(G.pos, sq); G.pos = sq; G.left--;
+  if (p.st.includes(sq) && !G.got.includes(sq)) G.got.push(sq);
+  if (G.got.length === p.st.length) { board.clear('dot'); return (G.busy = true, later(win, 350)); }
+  if (G.left === 0) { G.busy = true; G.mist++; board.clear('dot'); say('Ходы закончились. Попробуй другой путь.', 'bad'); return later(() => resetPuzzle(true), 1400); }
+  if (G.tier === 0) routeDots();
+  say(G.got.length ? 'Звезда собрана! Идём дальше.' : 'Хорошо. Куда дальше?', 'good');
+}
+/* Queens */
+function tapQueens(sq) {
+  const p = G.p, n = p.n;
+  if (p.f.includes(sq)) { board.flash(sq, 'bad', 600); return say('Серый ферзь закреплён. Его двигать нельзя.'); }
+  if (G.q.includes(sq)) { G.q = G.q.filter(x => x !== sq); board.take(sq); G.mist++; return say('Ферзь снят. Это считается ошибкой.'); }
+  const all = p.f.concat(G.q), hit = all.filter(q => E.qHit(n, q, sq));
+  if (hit.length) { G.mist++; board.flash(sq, 'bad'); hit.forEach(h => board.flash(h, 'bad')); board.shake(); return say(`Сюда нельзя: клетку ${sqName(n, sq)} бьёт ферзь на ${sqName(n, hit[0])}.`, 'bad'); }
+  G.q.push(sq); G.dirty = true; board.put(sq, 'Q', 'pw', true);
+  if (all.length + 1 === n) return (G.busy = true, later(win, 350));
+  say('Ферзь поставлен. Ищи место для следующего.', 'good');
+}
+/* Solo */
+function tapSolo(sq) {
+  const n = G.p.n;
+  if (G.sel != null && G.targets.includes(sq)) {
+    const from = G.sel; deselect(); G.hist.push(G.b); G.b = E.soloApply(G.b, from, sq); board.move(from, sq); G.dirty = true;
+    const left = G.b.filter(Boolean).length;
+    if (left === 1) return (G.busy = true, later(win, 350));
+    if (!E.soloMoves(G.b, n).length) return say(`Взятий больше нет, а фигур осталось ${left}. Отмени ход или начни сначала.`, 'bad');
+    return say('Взятие! Кто бьёт следующим?', 'good');
+  }
+  if (!G.b[sq]) return deselect();
+  const t = E.soloMoves(G.b, n, sq).map(m => m[1]);
+  select(sq, t, () => true);
+  if (!t.length) say('Этой фигуре сейчас некого бить.');
+}
+function undo() {
+  if (G.busy || G.won || !G.hist.length) return;
+  G.b = G.hist.pop(); G.mist++; deselect(); board.set(G.b); say('Ход отменён. Это считается ошибкой.'); pills();
+}
+function hint() {
+  if (G.busy || G.won) return;
+  const p = G.p; G.hints++; deselect();
+  if (G.mode === 'mate') {
+    const m = p.n === 2 && G.step === 0 ? E.legal(G.b, 8, true).find(x => E.forces2(G.b, 8, x).ok) : E.mates1(G.b, 8)[0];
+    board.flash(m[0], 'hint', 1900); say('Подсказка: ходи этой фигурой.');
+  } else if (G.mode === 'route') {
+    G.danger.forEach(s => { if (!G.g[s]) board.mark(s, 'danger'); });
+    setTimeout(() => board.clear('danger'), 3500); say('Заштрихованы клетки под ударом. Запомни их!');
+  } else if (G.mode === 'queens') {
+    const sol = E.queensAll(p.n, p.f.concat(G.q), 1)[0];
+    if (!sol) say('С такой расстановкой решения нет. Сними одного из своих ферзей.', 'bad');
+    else { board.flash(sol.find(s => !p.f.includes(s) && !G.q.includes(s)), 'hint', 1900); say('Подсказка: сюда можно поставить ферзя.'); }
+  } else {
+    const s = E.soloSolve(G.b, p.n);
+    if (!s) say('Из этой позиции решения нет. Отмени ход.', 'bad');
+    else { board.flash(s[0][0], 'hint', 1900); say('Подсказка: сейчас бьёт эта фигура.'); }
+  }
+  pills();
+}
+
+/* ---------- Win ---------- */
+function win() {
+  G.won = true; G.busy = false; board.clear('sel', 'dot', 'ring'); pills();
+  const pen = G.mist + 2 * G.hints, st = pen === 0 ? 3 : pen <= 2 ? 2 : 1, id = pid(G.mode, G.tier, G.idx);
+  const before = rankIdx(totalStars());
+  if (!S.done[id]) { const t = dayStr(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
+    if (S.streak.last !== t) { S.streak.n = S.streak.last === dayStr(y) ? S.streak.n + 1 : 1; S.streak.last = t; } }
+  S.done[id] = Math.max(S.done[id] || 0, st); save();
+  const after = rankIdx(totalStars());
+  say('Решено!', 'good');
+  const hasNext = G.idx + 1 < PER || (G.tier < 2 && tierOpen(G.mode, G.tier + 1));
+  const text = st === 3 ? 'Без единой ошибки и без подсказок.' : `${plural(G.mist, ['Ошибка', 'Ошибок', 'Ошибок'])}: ${G.mist}, подсказок: ${G.hints}. Реши ещё раз чисто, чтобы взять три звезды.`;
+  setTimeout(() => {
+    const w = $('#win');
+    w.innerHTML = `<div class="sheet"><div class="big-stars">${[1, 2, 3].map(i => starSvg(i <= st)).join('')}</div>
+      <h2 id="win-title">${st === 3 ? 'Блестяще!' : st === 2 ? 'Хорошая работа!' : 'Задача решена!'}</h2><p>${text}</p>
+      ${after > before ? `<div class="rank-up">Новое звание: ${RANKS[after][1]}!</div>` : ''}
+      <div class="btns">${st < 3 ? '<button class="btn" data-win="again">Ещё раз</button>' : ''}
+        <button class="btn" data-win="list">К задачам</button>
+        ${hasNext ? '<button class="btn primary" data-win="next">Дальше</button>' : ''}</div></div>`;
+    const sheet = w.firstElementChild, cols = ['#f8dedd', '#dce8f7', '#dcefe4', '#e9e0f8', '#e0a93f', '#c4474f'];
+    for (let i = 0; i < 18; i++) { const c = document.createElement('i'); c.className = 'confetti'; const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 110;
+      c.style.cssText = `background:${cols[i % 6]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 30}px;--rot:${Math.random() * 540}deg;animation-delay:${Math.random() * .15}s`; sheet.appendChild(c); }
+    w.classList.add('on');
+  }, 500);
+}
+
+/* ---------- Settings ---------- */
+function openSettings() {
+  let code = ''; try { code = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); } catch (e) {}
+  $('#settings').innerHTML = `<div class="sheet left"><h2 id="set-title">Настройки</h2>
+    <div class="field"><label for="f-name">Имя игрока</label><input id="f-name" maxlength="20" value="${esc(S.name)}" autocomplete="off"></div>
+    <div class="field"><label for="f-code">Код прогресса</label><small>Сохрани его, чтобы перенести прогресс на другое устройство.</small>
+      <textarea id="f-code" readonly>${code}</textarea><div class="row"><button class="btn" id="b-copy">Скопировать код</button></div></div>
+    <div class="field"><label for="f-in">Восстановить прогресс</label><textarea id="f-in" placeholder="Вставь сюда код прогресса"></textarea>
+      <div class="row"><button class="btn" id="b-restore">Восстановить</button><button class="btn danger" id="b-wipe">Сбросить прогресс</button></div>
+      <small id="set-note" aria-live="polite"></small></div>
+    <div class="btns"><button class="btn primary" id="b-close">Готово</button></div></div>`;
+  $('#settings').classList.add('on');
+}
+function closeSettings() { const v = $('#f-name').value.trim(); if (v) S.name = v; save(); $('#settings').classList.remove('on'); renderHome(); }
+
+/* ---------- Events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button,.sq'); if (!t) return;
+  if (t.classList.contains('sq')) return tap(+t.dataset.i);
+  if (t.dataset.mode) return renderMode(t.dataset.mode);
+  if (t.dataset.play) { const [m, ti, i] = t.dataset.play.split(','); return startPuzzle(m, +ti, +i); }
+  if (t.dataset.go === 'home') return renderHome();
+  if (t.dataset.go === 'mode') { clearTimeout(G.timer); return renderMode(G.mode); }
+  if (t.dataset.win) {
+    $('#win').classList.remove('on');
+    if (t.dataset.win === 'again') return startPuzzle(G.mode, G.tier, G.idx);
+    if (t.dataset.win === 'list') return renderMode(G.mode);
+    return G.idx + 1 < PER ? startPuzzle(G.mode, G.tier, G.idx + 1) : startPuzzle(G.mode, G.tier + 1, 0);
+  }
+  if (t.id === 'gear') return openSettings();
+  if (t.id === 'b-close') return closeSettings();
+  if (t.id === 'b-hint') return hint();
+  if (t.id === 'b-undo') return undo();
+  if (t.id === 'b-reset') { if (!G.won) { resetPuzzle(false); } return; }
+  if (t.id === 'b-copy') { const note = $('#set-note'); const ta = $('#f-code'); ta.select();
+    try { navigator.clipboard.writeText(ta.value).then(() => note.textContent = 'Код скопирован.', () => note.textContent = 'Выдели код и скопируй вручную.'); } catch (x) { note.textContent = 'Выдели код и скопируй вручную.'; } return; }
+  if (t.id === 'b-restore') { const note = $('#set-note');
+    try { const o = JSON.parse(decodeURIComponent(escape(atob($('#f-in').value.trim())))); if (!o || typeof o.done !== 'object') throw 0; S = Object.assign({ name: 'Тихон', done: {}, streak: { last: '', n: 0 } }, o); save(); $('#f-name').value = S.name; note.textContent = 'Прогресс восстановлен.'; }
+    catch (x) { note.textContent = 'Код не подошёл. Проверь, что он вставлен целиком.'; } return; }
+  if (t.id === 'b-wipe') { if (t.dataset.sure) { S.done = {}; S.streak = { last: '', n: 0 }; save(); t.textContent = 'Сбросить прогресс'; delete t.dataset.sure; $('#set-note').textContent = 'Прогресс сброшен.'; } else { t.dataset.sure = 1; t.textContent = 'Точно сбросить?'; } return; }
+});
+load(); renderHome();
+try { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {}
+</script>
+</body>
+</html>
